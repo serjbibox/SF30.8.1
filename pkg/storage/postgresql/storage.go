@@ -24,6 +24,7 @@ func New(constr string) (*Storage, error) {
 	return &s, nil
 }
 
+//Создание новой задачи.
 func (s *Storage) Create(t storage.Task) (int, error) {
 	var id int
 	err := s.db.QueryRow(context.Background(), `
@@ -37,16 +38,46 @@ func (s *Storage) Create(t storage.Task) (int, error) {
 	return id, err
 }
 
+//Обновление задачи по ID.
+func (s *Storage) Update(id uint64, t storage.Task) (uint64, error) {
+
+	err := s.db.QueryRow(context.Background(), `
+		UPDATE tasks 
+		SET opened = $1, 
+			closed = $2, 
+			author_id = $3, 
+			assigned_id = $4, 
+			title = $5, 
+			content = $6
+		WHERE id = $7	
+		RETURNING id;
+		`,
+		t.Opened,
+		t.Closed,
+		t.AuthorID,
+		t.AssignedID,
+		t.Title,
+		t.Content,
+		id,
+	).Scan(&id)
+	return id, err
+}
+
+//Удаление задачи по ID.
+func (s *Storage) Delete(id uint64) error {
+	_, err := s.db.Exec(context.Background(), `
+		DELETE FROM tasks 
+		WHERE id = $1	
+		`,
+		id,
+	)
+	return err
+}
+
+//Запрос всех задач.
 func (s *Storage) GetAll() ([]storage.Task, error) {
 	rows, err := s.db.Query(context.Background(), `
-		SELECT 
-			id,
-			opened,
-			closed,
-			author_id,
-			assigned_id,
-			title,
-			content
+		SELECT *
 		FROM tasks
 		ORDER BY id;
 	`,
@@ -73,6 +104,33 @@ func (s *Storage) GetAll() ([]storage.Task, error) {
 
 	}
 	return tasks, rows.Err()
+}
+
+//Запрос задачи по ID.
+func (s *Storage) GetById(id uint64) (*storage.Task, error) {
+	var err error
+	var t storage.Task
+	err = s.db.QueryRow(context.Background(), `
+			SELECT * 
+			FROM tasks
+			WHERE tasks.id = $1
+			ORDER BY id;
+		`,
+		id,
+	).Scan(
+		&t.ID,
+		&t.Opened,
+		&t.Closed,
+		&t.AuthorID,
+		&t.AssignedID,
+		&t.Title,
+		&t.Content,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &t, nil
 }
 
 //Запрос списка задач по автору.
@@ -151,7 +209,8 @@ func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
 	`
 	tail := `
 		AND tasks_labels.task_id = tasks.id
-		AND tasks_labels.label_id = labels.id;
+		AND tasks_labels.label_id = labels.id
+		ORDER BY tasks.id;
 	`
 	switch p := p.(type) {
 	case uint64:

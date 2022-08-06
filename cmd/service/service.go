@@ -24,31 +24,12 @@ func main() {
 	if err != nil {
 		elog.Fatalf("error connecting database: %s", err.Error())
 	}
-	/*id, err := db.Create(storage.Task{
-		AuthorID: 1,
-		Title:    "task",
-		Content:  "do it",
-	})
-	if err != nil {
-		elog.Println(err)
-	} else {
-		ilog.Println("id: ", id)
-	}*/
-	//var authorId string = "Petya"
-	/*var authorId uint32 = 1
-	tasks, err := db.GetByAuthor(authorId)
-	if err != nil {
-		elog.Println(err)
-	}*/
 
-	var labelId string = "task2"
-	tasks, err := db.GetByLabel(labelId)
+	err = db.Delete(9)
 	if err != nil {
-		elog.Println(err)
+		elog.Fatalf("error deleting database: %s", err.Error())
 	}
-	for _, val := range tasks {
-		ilog.Println("id:", val)
-	}
+
 }
 
 func initConfig() error {

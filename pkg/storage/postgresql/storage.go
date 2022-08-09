@@ -9,6 +9,11 @@ import (
 	"github.com/serjbibox/SF30.8.1/pkg/storage"
 )
 
+const (
+	ID_TYPE = 1 + iota
+	NAME_TYPE
+)
+
 type Storage struct {
 	db *pgxpool.Pool
 }
@@ -64,12 +69,12 @@ func (s *Storage) Update(id uint64, t storage.Task) (uint64, error) {
 }
 
 //Удаление задачи по ID.
-func (s *Storage) Delete(id uint64) error {
+func (s *Storage) Delete(taskid uint64) error {
 	_, err := s.db.Exec(context.Background(), `
 		DELETE FROM tasks 
 		WHERE id = $1	
 		`,
-		id,
+		taskid,
 	)
 	return err
 }
@@ -140,24 +145,10 @@ func (s *Storage) GetById(id uint64) (*storage.Task, error) {
 func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
 	var rows pgx.Rows
 	var err error
-	head := `
-	SELECT 
-		tasks.id,
-		tasks.opened,
-		tasks.closed,
-		tasks.author_id,
-		tasks.assigned_id,
-		tasks.title,
-		tasks.content
-	FROM tasks, users	
-	`
-	tail := `
-	ORDER BY id;
-	`
 	switch p := p.(type) {
 	case uint64:
 		rows, err = s.db.Query(context.Background(),
-			head+"WHERE tasks.author_id = $1 AND users.id = tasks.author_id"+tail,
+			buildAuthorQuery(ID_TYPE),
 			p,
 		)
 		if err != nil {
@@ -165,7 +156,7 @@ func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
 		}
 	case string:
 		rows, err = s.db.Query(context.Background(),
-			head+"WHERE users.name = $1 AND users.id = tasks.author_id"+tail,
+			buildAuthorQuery(NAME_TYPE),
 			p,
 		)
 		if err != nil {
@@ -202,20 +193,10 @@ func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
 func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
 	var rows pgx.Rows
 	var err error
-	head := `
-		SELECT tasks.id, tasks.opened, tasks.closed, tasks.author_id,
-			tasks.assigned_id, tasks.title, tasks.content
-		FROM tasks, tasks_labels, labels
-	`
-	tail := `
-		AND tasks_labels.task_id = tasks.id
-		AND tasks_labels.label_id = labels.id
-		ORDER BY tasks.id;
-	`
 	switch p := p.(type) {
 	case uint64:
 		rows, err = s.db.Query(context.Background(),
-			head+"WHERE labels.id = $1"+tail,
+			buildLabelQuery(ID_TYPE),
 			p,
 		)
 		if err != nil {
@@ -223,7 +204,7 @@ func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
 		}
 	case string:
 		rows, err = s.db.Query(context.Background(),
-			head+"WHERE labels.name = $1"+tail,
+			buildLabelQuery(NAME_TYPE),
 			p,
 		)
 		if err != nil {
@@ -251,4 +232,77 @@ func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
 
 	}
 	return tasks, rows.Err()
+}
+
+func buildLabelQuery(t int) string {
+	switch t {
+	case ID_TYPE:
+		return `
+		SELECT 
+			tasks.id, 
+			tasks.opened, 
+			tasks.closed, 
+			tasks.author_id,
+			tasks.assigned_id, 
+			tasks.title, 
+			tasks.content
+		FROM tasks, tasks_labels, labels
+		WHERE labels.id = $1
+		AND tasks_labels.task_id = tasks.id
+		AND tasks_labels.label_id = labels.id
+		ORDER BY tasks.id;
+		`
+	case NAME_TYPE:
+		return `
+		SELECT 
+			tasks.id, 
+			tasks.opened, 
+			tasks.closed, 
+			tasks.author_id,
+			tasks.assigned_id, 
+			tasks.title, 
+			tasks.content
+		FROM tasks, tasks_labels, labels
+		WHERE labels.name = $1
+		AND tasks_labels.task_id = tasks.id
+		AND tasks_labels.label_id = labels.id
+		ORDER BY tasks.id;
+		`
+	}
+	return ""
+}
+
+func buildAuthorQuery(t int) string {
+	switch t {
+	case ID_TYPE:
+		return `
+		SELECT 
+			tasks.id,
+			tasks.opened,
+			tasks.closed,
+			tasks.author_id,
+			tasks.assigned_id,
+			tasks.title,
+			tasks.content
+		FROM tasks	
+		WHERE tasks.author_id = $1 
+		ORDER BY id;
+		`
+	case NAME_TYPE:
+		return `
+		SELECT 
+			tasks.id,
+			tasks.opened,
+			tasks.closed,
+			tasks.author_id,
+			tasks.assigned_id,
+			tasks.title,
+			tasks.content
+		FROM tasks, users	
+		WHERE users.name = $1 AND users.id = tasks.author_id
+		AND users.id = tasks.author_id
+		ORDER BY id;
+		`
+	}
+	return ""
 }

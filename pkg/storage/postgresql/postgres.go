@@ -3,8 +3,14 @@ package postgresql
 import (
 	"log"
 	"os"
+)
 
-	"github.com/spf13/viper"
+const (
+	DB_USERNAME = "serj"
+	DB_HOST     = "192.168.52.129"
+	DB_PORT     = "5432"
+	DB_NAME     = "serjdb"
+	DB_SSLMODE  = "require"
 )
 
 var elog = log.New(os.Stderr, "postgresql error\t", log.Ldate|log.Ltime|log.Lshortfile)
@@ -17,10 +23,10 @@ func GetConnectionString() string {
 		elog.Fatalf("error reading password from os environment")
 	}
 	return "postgres://" +
-		viper.GetString("db.username") + ":" +
+		DB_USERNAME + ":" +
 		pwd + "@" +
-		viper.GetString("db.host") + ":" +
-		viper.GetString("db.port") + "/" +
-		viper.GetString("db.name") + "?sslmode=" +
-		viper.GetString("db.sslmode")
+		DB_HOST + ":" +
+		DB_PORT + "/" +
+		DB_NAME + "?sslmode=" +
+		DB_SSLMODE
 }

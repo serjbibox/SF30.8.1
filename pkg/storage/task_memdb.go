@@ -23,6 +23,15 @@ func (s *TaskMemdb) Create(t models.Task) (int, error) {
 
 //Удаление задачи по ID.
 func (s *TaskMemdb) Delete(taskid uint64) error {
+	if taskid == 0 {
+		return errors.New("id can not be zero")
+	}
+	if uint64(len(s.db)) == 0 {
+		return errors.New("there are no entries in the table")
+	}
+	if taskid > uint64(len(s.db)) {
+		return errors.New("no such entry in the table")
+	}
 	return nil
 }
 

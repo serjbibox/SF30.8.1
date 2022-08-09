@@ -1,12 +1,10 @@
-package postgresql
+package storage
 
 import (
 	"fmt"
 	"log"
 	"os"
 	"testing"
-
-	"github.com/serjbibox/SF30.8.1/pkg/storage"
 )
 
 var s *Storage

@@ -1,4 +1,4 @@
-package postgresql
+package storage
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
-	"github.com/serjbibox/SF30.8.1/pkg/storage"
+	"github.com/serjbibox/SF30.8.1/pkg/models"
 )
 
 const (
@@ -14,23 +14,16 @@ const (
 	NAME_TYPE
 )
 
-type Storage struct {
+type TaskPostgres struct {
 	db *pgxpool.Pool
 }
 
-func New(constr string) (*Storage, error) {
-	db, err := pgxpool.Connect(context.Background(), constr)
-	if err != nil {
-		return nil, err
-	}
-	s := Storage{
-		db: db,
-	}
-	return &s, nil
+func NewTaskPostgres(db *pgxpool.Pool) *TaskPostgres {
+	return &TaskPostgres{db: db}
 }
 
 //Создание новой задачи.
-func (s *Storage) Create(t storage.Task) (int, error) {
+func (s *TaskPostgres) Create(t models.Task) (int, error) {
 	var id int
 	err := s.db.QueryRow(context.Background(), `
 		INSERT INTO tasks (title, content, author_id)
@@ -43,8 +36,51 @@ func (s *Storage) Create(t storage.Task) (int, error) {
 	return id, err
 }
 
+//Удаление задачи по ID.
+func (s *TaskPostgres) Delete(taskid uint64) error {
+	_, err := s.db.Exec(context.Background(), `
+		DELETE FROM tasks 
+		WHERE id = $1	
+		`,
+		taskid,
+	)
+	return err
+}
+
+//Запрос всех задач.
+func (s *TaskPostgres) GetAll() ([]models.Task, error) {
+	rows, err := s.db.Query(context.Background(), `
+		SELECT *
+		FROM tasks
+		ORDER BY id;
+	`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	var tasks []models.Task
+	for rows.Next() {
+		var t models.Task
+		err = rows.Scan(
+			&t.ID,
+			&t.Opened,
+			&t.Closed,
+			&t.AuthorID,
+			&t.AssignedID,
+			&t.Title,
+			&t.Content,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, t)
+
+	}
+	return tasks, rows.Err()
+}
+
 //Обновление задачи по ID.
-func (s *Storage) Update(id uint64, t storage.Task) (uint64, error) {
+func (s *TaskPostgres) Update(id uint64, t models.Task) (uint64, error) {
 
 	err := s.db.QueryRow(context.Background(), `
 		UPDATE tasks 
@@ -68,53 +104,10 @@ func (s *Storage) Update(id uint64, t storage.Task) (uint64, error) {
 	return id, err
 }
 
-//Удаление задачи по ID.
-func (s *Storage) Delete(taskid uint64) error {
-	_, err := s.db.Exec(context.Background(), `
-		DELETE FROM tasks 
-		WHERE id = $1	
-		`,
-		taskid,
-	)
-	return err
-}
-
-//Запрос всех задач.
-func (s *Storage) GetAll() ([]storage.Task, error) {
-	rows, err := s.db.Query(context.Background(), `
-		SELECT *
-		FROM tasks
-		ORDER BY id;
-	`,
-	)
-	if err != nil {
-		return nil, err
-	}
-	var tasks []storage.Task
-	for rows.Next() {
-		var t storage.Task
-		err = rows.Scan(
-			&t.ID,
-			&t.Opened,
-			&t.Closed,
-			&t.AuthorID,
-			&t.AssignedID,
-			&t.Title,
-			&t.Content,
-		)
-		if err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, t)
-
-	}
-	return tasks, rows.Err()
-}
-
 //Запрос задачи по ID.
-func (s *Storage) GetById(id uint64) (*storage.Task, error) {
+func (s *TaskPostgres) GetById(id uint64) (*models.Task, error) {
 	var err error
-	var t storage.Task
+	var t models.Task
 	err = s.db.QueryRow(context.Background(), `
 			SELECT * 
 			FROM tasks
@@ -142,7 +135,7 @@ func (s *Storage) GetById(id uint64) (*storage.Task, error) {
 //Принимает 2 типа аргумента - uint64 и string.
 //Если аргумент типа uint64, выводит список задач по ID автора (tasks.author_id).
 //Если аргумент типа string, выводит список задач по имени автора (users.name).
-func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
+func (s *TaskPostgres) GetByAuthor(p interface{}) ([]models.Task, error) {
 	var rows pgx.Rows
 	var err error
 	switch p := p.(type) {
@@ -165,9 +158,9 @@ func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
 	default:
 		return nil, errors.New("invalid type of query parameter")
 	}
-	var tasks []storage.Task
+	var tasks []models.Task
 	for rows.Next() {
-		var t storage.Task
+		var t models.Task
 		err = rows.Scan(
 			&t.ID,
 			&t.Opened,
@@ -190,7 +183,7 @@ func (s *Storage) GetByAuthor(p interface{}) ([]storage.Task, error) {
 //Принимает 2 типа аргумента - uint64 и string.
 //Если аргумент типа uint64, выводит список задач по ID метки (labels.id).
 //Если аргумент типа string, выводит список задач по имени метки (labels.name).
-func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
+func (s *TaskPostgres) GetByLabel(p interface{}) ([]models.Task, error) {
 	var rows pgx.Rows
 	var err error
 	switch p := p.(type) {
@@ -213,9 +206,9 @@ func (s *Storage) GetByLabel(p interface{}) ([]storage.Task, error) {
 	default:
 		return nil, errors.New("invalid type of query parameter")
 	}
-	var tasks []storage.Task
+	var tasks []models.Task
 	for rows.Next() {
-		var t storage.Task
+		var t models.Task
 		err = rows.Scan(
 			&t.ID,
 			&t.Opened,

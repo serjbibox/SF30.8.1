@@ -17,7 +17,6 @@ const (
 )
 
 var elog = log.New(os.Stderr, "postgresql error\t", log.Ldate|log.Ltime|log.Lshortfile)
-
 var ilog = log.New(os.Stdout, "postgresql info\t", log.Ldate|log.Ltime)
 
 func GetConnectionString() string {

@@ -11,8 +11,8 @@ type TaskMemdb struct {
 	db memdb.DB
 }
 
-func NewTaskMemDb(db memdb.DB) TaskMemdb {
-	return TaskMemdb{db: db}
+func NewTaskMemDb(db memdb.DB) *TaskMemdb {
+	return &TaskMemdb{db: db}
 }
 
 //Создание новой задачи.

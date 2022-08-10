@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/serjbibox/SF30.8.1/pkg/models"
+	"github.com/serjbibox/SF30.8.1/pkg/storage/memdb"
 )
 
 type Task interface {
@@ -22,5 +23,11 @@ type Storage struct {
 func NewStoragePostgres(db *pgxpool.Pool) *Storage {
 	return &Storage{
 		Task: NewTaskPostgres(db),
+	}
+}
+
+func NewStorageMemDb(db memdb.DB) *Storage {
+	return &Storage{
+		Task: NewTaskMemDb(db),
 	}
 }

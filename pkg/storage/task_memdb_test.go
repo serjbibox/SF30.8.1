@@ -15,7 +15,6 @@ func TestNewTaskMemDb(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want TaskMemdb
 	}{
 		// TODO: Add test cases.
 		{
@@ -24,8 +23,8 @@ func TestNewTaskMemDb(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewTaskMemDb(tt.args.db); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewTaskMemDb() = %v, want %v", got, tt.want)
+			if got := NewTaskMemDb(tt.args.db); got == nil {
+				t.Errorf("NewTaskMemDb() = %v", got)
 			}
 
 		})
